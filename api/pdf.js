@@ -16,7 +16,6 @@ async function launchBrowser() {
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
-      '--single-process',
     ],
     defaultViewport: chromium.defaultViewport,
     executablePath,
@@ -24,7 +23,7 @@ async function launchBrowser() {
   });
 }
 
-module.exports = async (req, res) => {
+const handler = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -43,12 +42,8 @@ module.exports = async (req, res) => {
   let browser;
   try {
     browser = await launchBrowser();
-    console.log('Browser launched successfully');
 
     const page = await browser.newPage();
-    console.log('Page created');
-
-    // Set a generous timeout for page operations
     page.setDefaultTimeout(30000);
 
     const logoHtml = logoBase64
@@ -98,7 +93,6 @@ module.exports = async (req, res) => {
 </html>`;
 
     await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    console.log('HTML content set');
 
     const pdfBuffer = await page.pdf({
       format: 'A4',
@@ -107,7 +101,6 @@ module.exports = async (req, res) => {
     });
 
     await browser.close();
-    console.log('PDF generated, size:', pdfBuffer.length);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline; filename="clearview-report.pdf"');
@@ -121,3 +114,9 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: 'Failed to generate PDF: ' + err.message });
   }
 };
+
+handler.config = {
+  runtime: 'nodejs20.x',
+};
+
+module.exports = handler;
