@@ -1,35 +1,96 @@
 from flask import Flask, request, jsonify, render_template
 import json, csv, io, os, time, requests
-from collections import Counter
+from collections import Counter, defaultdict
 
 app = Flask(__name__)
 
 def to_num(v):
     try:
-        if '.' in v:
+        if isinstance(v, str) and '%' in v:
+            v = v.replace('%', '')
+        if '.' in str(v):
             return float(v)
         return int(v)
     except:
         return None
 
-def compute_stats(headers, rows):
-    stats = {}
-    for idx, h in enumerate(headers):
-        vals = [r[idx] for r in rows if len(r) > idx and r[idx].strip() != '']
-        nums = [to_num(v) for v in vals]
-        nums = [n for n in nums if n is not None]
-        entry = {'count': len(vals), 'numeric_count': len(nums)}
-        if nums:
-            entry['sum'] = sum(nums)
-            entry['avg'] = round(sum(nums) / len(nums), 2)
-            entry['min'] = min(nums)
-            entry['max'] = max(nums)
-        cats = [v for v in vals if to_num(v) is None]
-        if cats:
-            top = Counter(cats).most_common(5)
-            entry['top_categories'] = [{'value': k, 'count': c} for k, c in top]
-        stats[h] = entry
-    return stats
+def find_header(headers, keywords):
+    h_lower = [h.lower() for h in headers]
+    for kw in keywords:
+        for i, h in enumerate(h_lower):
+            if kw in h:
+                return i, headers[i]
+    return None, None
+
+def compute_campaign_metrics(headers, rows):
+    cost_idx, cost_col = find_header(headers, ['cost', 'spend', 'amount'])
+    conv_idx, conv_col = find_header(headers, ['conversion', 'conv', 'purchases', 'sales'])
+    rate_idx, rate_col = find_header(headers, ['rate', 'ctr', 'cvr', 'roas'])
+    camp_idx, camp_col = find_header(headers, ['campaign', 'ad group', 'adgroup', 'campaign name'])
+    click_idx, click_col = find_header(headers, ['click', 'clicks'])
+
+    total_spend = 0
+    total_conversions = 0
+    total_clicks = 0
+    campaign_stats = defaultdict(lambda: {'spend': 0, 'conversions': 0, 'clicks': 0, 'rate': None})
+
+    for r in rows:
+        if cost_idx is not None and len(r) > cost_idx:
+            v = to_num(r[cost_idx])
+            if v is not None: total_spend += v
+        if conv_idx is not None and len(r) > conv_idx:
+            v = to_num(r[conv_idx])
+            if v is not None: total_conversions += v
+        if click_idx is not None and len(r) > click_idx:
+            v = to_num(r[click_idx])
+            if v is not None: total_clicks += v
+        if camp_idx is not None and len(r) > camp_idx:
+            camp = r[camp_idx].strip()
+            if cost_idx is not None and len(r) > cost_idx:
+                v = to_num(r[cost_idx])
+                if v is not None: campaign_stats[camp]['spend'] += v
+            if conv_idx is not None and len(r) > conv_idx:
+                v = to_num(r[conv_idx])
+                if v is not None: campaign_stats[camp]['conversions'] += v
+            if click_idx is not None and len(r) > click_idx:
+                v = to_num(r[click_idx])
+                if v is not None: campaign_stats[camp]['clicks'] += v
+            if rate_idx is not None and len(r) > rate_idx:
+                v = to_num(r[rate_idx])
+                if v is not None:
+                    campaign_stats[camp]['rate'] = v
+
+    avg_cpc = (total_spend / total_conversions) if total_conversions > 0 else 0
+
+    campaign_list = []
+    for camp, st in campaign_stats.items():
+        if st['conversions'] > 0:
+            rate = st['rate'] if st['rate'] is not None else round((st['conversions'] / st['spend']) * 100, 2) if st['spend'] > 0 else 0
+        else:
+            rate = st['rate'] if st['rate'] is not None else 0
+        campaign_list.append({
+            'name': camp,
+            'spend': round(st['spend'], 2),
+            'conversions': st['conversions'],
+            'clicks': st['clicks'],
+            'rate': rate,
+        })
+
+    campaign_list.sort(key=lambda x: x['rate'], reverse=True)
+
+    return {
+        'total_spend': round(total_spend, 2),
+        'total_conversions': total_conversions,
+        'avg_cpc': round(avg_cpc, 2),
+        'total_clicks': total_clicks,
+        'campaigns': campaign_list,
+        'columns': {
+            'cost': cost_col,
+            'conversions': conv_col,
+            'rate': rate_col,
+            'campaign': camp_col,
+        }
+    }
 
 @app.route('/')
 def home():
@@ -54,42 +115,43 @@ def upload():
 
         headers = rows[0]
         data_rows = rows[1:]
-        sample = '\n'.join([', '.join(r) for r in data_rows[:15]])
-        stats = compute_stats(headers, data_rows)
 
-        stats_lines = []
-        for h, s in stats.items():
-            line = f'{h}: {s["count"]} rows'
-            if s.get('numeric_count'):
-                line += f', sum={s["sum"]}, avg={s["avg"]}, min={s["min"]}, max={s["max"]}'
-            if s.get('top_categories'):
-                tops = ', '.join([f'{t["value"]} ({t["count"]})' for t in s['top_categories']])
-                line += f', top categories: {tops}'
-            stats_lines.append(line)
-        stats_block = '\n'.join(stats_lines)
+        metrics = compute_campaign_metrics(headers, data_rows)
+        total_rows = len(data_rows)
 
-        prompt = f"""You are a senior data analyst writing directly to a business owner/client. Below are sample rows from their CSV file and precomputed statistics for each column.
+        top3 = metrics['campaigns'][:3]
+        bottom3 = metrics['campaigns'][-3:] if len(metrics['campaigns']) >= 3 else metrics['campaigns']
 
-HEADERS: {', '.join(headers)}
+        top3_lines = ', '.join([f"{c['name']} ({c['rate']})" for c in top3]) if top3 else 'n/a'
+        bottom3_lines = ', '.join([f"{c['name']} ({c['rate']})" for c in bottom3]) if bottom3 else 'n/a'
 
-SAMPLE ROWS (first 15):
-{sample}
+        prompt = f"""Write a clean client-ready performance summary using ONLY the exact numbers below. Do not do any math. Do not guess. Do not invent numbers.
 
-PRECOMPUTED STATS (ground truth, MUST use these exact numbers):
-{stats_block}
+HEADERS DETECTED: {', '.join(headers)}
+TOTAL ROWS: {total_rows}
+TOTAL SPEND: {metrics['total_spend']}
+TOTAL CONVERSIONS: {metrics['total_conversions']}
+AVERAGE COST PER CONVERSION: {metrics['avg_cpc']}
+TOTAL CLICKS: {metrics['total_clicks']}
 
-Write a concise client-ready report in this EXACT format using ONLY the provided stats:
+TOP 3 CAMPAIGNS BY PERFORMANCE (best first):
+{top3_lines}
 
-• Total spend, total conversions, average cost per conversion
-• Top 3 campaigns by performance
-• Bottom 3 campaigns by performance
-• One clear recommendation for next month
+BOTTOM 3 CAMPAIGNS BY PERFORMANCE (worst first):
+{bottom3_lines}
 
-Rules:
-- Use bullet points exactly as shown above.
-- Keep wording plain and conversational, like a helpful human analyst.
-- No markdown headers, no numbering, no extra fluff.
-- Do not invent numbers. If you mention a metric, it must match the precomputed stats exactly."""
+OUTPUT FORMAT (write exactly like this, clean bullets, agency-ready tone):
+
+• Total spend: $X | Total conversions: Y | Average cost per conversion: $Z
+• Top performers: [name] (rate), [name] (rate), [name] (rate)
+• Underperformers: [name] (rate), [name] (rate), [name] (rate)
+• Recommendation: [1 sentence actionable advice for next month]
+
+RULES:
+- Use the exact numbers above. Do not recalculate anything.
+- Keep it to 4 bullet points exactly.
+- Write in plain conversational English, like a human analyst.
+- No markdown headers, no extra fluff, no hedging."""
 
         api_key = os.getenv('GROQ_API_KEY')
         if not api_key:
@@ -127,7 +189,7 @@ Rules:
                 summary = (body.get('choices', [{}])[0].get('message', {}) or {}).get('content', '').strip()
                 if not summary:
                     return jsonify({'error': 'AI provider returned an empty response.'}), 502
-                return jsonify({'summary': summary, 'rows_analyzed': len(data_rows)})
+                return jsonify({'summary': summary, 'rows_analyzed': total_rows})
             except requests.RequestException:
                 attempts += 1
                 if attempts >= 5:
