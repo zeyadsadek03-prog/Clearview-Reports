@@ -71,17 +71,25 @@ def compute_campaign_metrics(headers, rows):
     for camp, st in campaign_stats.items():
         if st['conversions'] > 0:
             rate = st['rate'] if st['rate'] is not None else round((st['conversions'] / st['spend']) * 100, 2) if st['spend'] > 0 else 0
+            cpc = round(st['spend'] / st['conversions'], 2) if st['spend'] > 0 else 0
         else:
             rate = st['rate'] if st['rate'] is not None else 0
+            cpc = None
         campaign_list.append({
             'name': camp,
             'spend': round(st['spend'], 2),
             'conversions': st['conversions'],
             'clicks': st['clicks'],
             'rate': rate,
+            'cpc': cpc,
         })
 
-    campaign_list.sort(key=lambda x: x['rate'], reverse=True)
+    def sort_key(x):
+        if x['cpc'] is None:
+            return (float('inf'), x['rate'])
+        return (x['cpc'], x['rate'])
+
+    campaign_list.sort(key=sort_key)
 
     return {
         'total_spend': round(total_spend, 2),
@@ -127,8 +135,8 @@ def upload():
         top3 = metrics['campaigns'][:3]
         bottom3 = metrics['campaigns'][-3:] if len(metrics['campaigns']) >= 3 else metrics['campaigns']
 
-        top3_lines = ', '.join([f"{c['name']} ({c['rate']})" for c in top3]) if top3 else 'n/a'
-        bottom3_lines = ', '.join([f"{c['name']} ({c['rate']})" for c in bottom3]) if bottom3 else 'n/a'
+        top3_lines = ', '.join([f"{c['name']} (${c['cpc']} CPC)" for c in top3]) if top3 else 'n/a'
+        bottom3_lines = ', '.join([f"{c['name']} (${c['cpc']} CPC)" for c in bottom3]) if bottom3 else 'n/a'
 
         prompt = f"""Write a clean client-ready performance summary using ONLY the exact numbers below. Do not do any math. Do not guess. Do not invent numbers.
 
@@ -139,17 +147,17 @@ TOTAL CONVERSIONS: {metrics['total_conversions']}
 AVERAGE COST PER CONVERSION: {metrics['avg_cpc']}
 TOTAL CLICKS: {metrics['total_clicks']}
 
-TOP 3 CAMPAIGNS BY PERFORMANCE (best first):
+TOP 3 CAMPAIGNS BY PERFORMANCE (most cost-efficient first, includes CPC):
 {top3_lines}
 
-BOTTOM 3 CAMPAIGNS BY PERFORMANCE (worst first):
+BOTTOM 3 CAMPAIGNS BY PERFORMANCE (least cost-efficient first, includes CPC):
 {bottom3_lines}
 
 OUTPUT FORMAT (write exactly like this, clean bullets, agency-ready tone):
 
 • Total spend: $X | Total conversions: Y | Average cost per conversion: $Z
-• Top performers: [name] (rate), [name] (rate), [name] (rate)
-• Underperformers: [name] (rate), [name] (rate), [name] (rate)
+• Top performers: [name] ($A CPC), [name] ($A CPC), [name] ($A CPC)
+• Underperformers: [name] ($A CPC), [name] ($A CPC), [name] ($A CPC)
 • Recommendation: [1 sentence actionable advice for next month]
 
 RULES:
