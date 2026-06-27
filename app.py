@@ -135,8 +135,8 @@ def upload():
         top3 = metrics['campaigns'][:3]
         bottom3 = metrics['campaigns'][-3:] if len(metrics['campaigns']) >= 3 else metrics['campaigns']
 
-        top3_lines = ', '.join([f"{c['name']} (${c['cpc']} CPC)" for c in top3]) if top3 else 'n/a'
-        bottom3_lines = ', '.join([f"{c['name']} (${c['cpc']} CPC)" for c in bottom3]) if bottom3 else 'n/a'
+        top3_lines = ', '.join([f"{c['name']} (${c['cpc']} cost per conversion)" for c in top3]) if top3 else 'n/a'
+        bottom3_lines = ', '.join([f"{c['name']} (${c['cpc']} cost per conversion)" for c in bottom3]) if bottom3 else 'n/a'
 
         prompt = f"""Write a clean client-ready performance summary using ONLY the exact numbers below. Do not do any math. Do not guess. Do not invent numbers.
 
@@ -147,17 +147,17 @@ TOTAL CONVERSIONS: {metrics['total_conversions']}
 AVERAGE COST PER CONVERSION: {metrics['avg_cpc']}
 TOTAL CLICKS: {metrics['total_clicks']}
 
-TOP 3 CAMPAIGNS BY PERFORMANCE (most cost-efficient first, includes CPC):
+TOP 3 CAMPAIGNS BY PERFORMANCE (lowest cost per conversion first):
 {top3_lines}
 
-BOTTOM 3 CAMPAIGNS BY PERFORMANCE (least cost-efficient first, includes CPC):
+BOTTOM 3 CAMPAIGNS BY PERFORMANCE (highest cost per conversion first):
 {bottom3_lines}
 
 OUTPUT FORMAT (write exactly like this, clean bullets, agency-ready tone):
 
 • Total spend: $X | Total conversions: Y | Average cost per conversion: $Z
-• Top performers: [name] ($A CPC), [name] ($A CPC), [name] ($A CPC)
-• Underperformers: [name] ($A CPC), [name] ($A CPC), [name] ($A CPC)
+• Top performers: [name] ($A cost per conversion), [name] ($A cost per conversion), [name] ($A cost per conversion)
+• Underperformers: [name] ($A cost per conversion), [name] ($A cost per conversion), [name] ($A cost per conversion)
 • Recommendation: [1 sentence actionable advice for next month]
 
 RULES:
