@@ -214,5 +214,39 @@ RULES:
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/send-email', methods=['POST'])
+def send_email():
+    data = request.get_json(silent=True) or {}
+    email = data.get('email', '').strip()
+    summary = data.get('summary', '').strip()
+    if not email or not summary:
+        return jsonify({'error': 'Email and summary are required.'}), 400
+
+    api_key = os.getenv('RESEND_API_KEY')
+    if not api_key:
+        return jsonify({'error': 'Email service not configured: missing RESEND_API_KEY'}), 500
+
+    try:
+        resp = requests.post(
+            'https://api.resend.com/emails',
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json',
+            },
+            json={
+                'from': 'Clearview Reports <reports@clearview.app>',
+                'to': [email],
+                'subject': 'Your Clearview Reports Summary',
+                'text': summary,
+            },
+            timeout=20,
+        )
+        resp.raise_for_status()
+        return jsonify({'status': 'sent'})
+    except requests.RequestException as e:
+        return jsonify({'error': str(e)}), 502
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
