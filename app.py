@@ -1,7 +1,35 @@
 from flask import Flask, request, jsonify, render_template
-import json
+import json, csv, io, os, requests
+from collections import Counter
 
 app = Flask(__name__)
+
+def to_num(v):
+    try:
+        if '.' in v:
+            return float(v)
+        return int(v)
+    except:
+        return None
+
+def compute_stats(headers, rows):
+    stats = {}
+    for idx, h in enumerate(headers):
+        vals = [r[idx] for r in rows if len(r) > idx and r[idx].strip() != '']
+        nums = [to_num(v) for v in vals]
+        nums = [n for n in nums if n is not None]
+        entry = {'count': len(vals), 'numeric_count': len(nums)}
+        if nums:
+            entry['sum'] = sum(nums)
+            entry['avg'] = round(sum(nums) / len(nums), 2)
+            entry['min'] = min(nums)
+            entry['max'] = max(nums)
+        cats = [v for v in vals if to_num(v) is None]
+        if cats:
+            top = Counter(cats).most_common(5)
+            entry['top_categories'] = [{'value': k, 'count': c} for k, c in top]
+        stats[h] = entry
+    return stats
 
 @app.route('/')
 def home():
@@ -17,7 +45,6 @@ def upload():
         return jsonify({'error': 'Only CSV files accepted'}), 400
 
     try:
-        import csv, io, os, requests
         stream = io.StringIO(f.stream.read().decode('utf-8'))
         reader = csv.reader(stream)
         rows = list(reader)
@@ -27,22 +54,40 @@ def upload():
 
         headers = rows[0]
         data_rows = rows[1:]
-        sample = '\n'.join([', '.join(r) for r in data_rows[:20]])
+        sample = '\n'.join([', '.join(r) for r in data_rows[:15]])
+        stats = compute_stats(headers, data_rows)
 
-        prompt = f"""You are a senior data analyst writing directly to a business owner/client. Below are sample rows from their CSV file.
-Headers: {', '.join(headers)}
-Rows:
+        stats_lines = []
+        for h, s in stats.items():
+            line = f'{h}: {s["count"]} rows'
+            if s.get('numeric_count'):
+                line += f', sum={s["sum"]}, avg={s["avg"]}, min={s["min"]}, max={s["max"]}'
+            if s.get('top_categories'):
+                tops = ', '.join([f'{t["value"]} ({t["count"]})' for t in s['top_categories']])
+                line += f', top categories: {tops}'
+            stats_lines.append(line)
+        stats_block = '\n'.join(stats_lines)
+
+        prompt = f"""You are a senior data analyst writing directly to a business owner/client. Below are sample rows from their CSV file and precomputed statistics for each column.
+
+HEADERS: {', '.join(headers)}
+
+SAMPLE ROWS (first 15):
 {sample}
+
+PRECOMPUTED STATS (ground truth, MUST use these exact numbers):
+{stats_block}
 
 Write ONE short executive summary paragraph (3-6 sentences) in plain, conversational English.
 
 Rules:
 - Start with the single most important number or insight.
-- Mention totals, averages, or standout figures naturally.
+- Mention totals, averages, or standout figures ONLY from the provided stats.
 - Give a clear verdict: is this data showing good performance, average performance, or something to fix?
 - End with 1-2 concrete, actionable recommendations the client can do next month.
 - Sound like a helpful human analyst, not a bot. Use contractions, be direct, avoid jargon.
-- No bullet lists, no numbered sections, no markdown formatting. Just one flowing paragraph."""
+- No bullet lists, no numbered sections, no markdown formatting. Just one flowing paragraph.
+- If you mention a number, ensure it matches the precomputed stats exactly."""
 
         api_key = os.getenv('GROQ_API_KEY')
         if not api_key:
@@ -64,7 +109,7 @@ Rules:
         resp.raise_for_status()
         summary = resp.json()['choices'][0]['message']['content'].strip()
 
-        return jsonify({'summary': summary, 'rows_analyzed': min(len(data_rows), 20)})
+        return jsonify({'summary': summary, 'rows_analyzed': len(data_rows)})
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
