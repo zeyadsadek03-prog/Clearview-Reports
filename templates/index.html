@@ -500,7 +500,23 @@
         <ul class="summary-body" id="summaryList"></ul>
       </div>
 
-      <div class="email-panel" id="emailPanel" style="display: none;">
+            <div class="brand-panel" id="brandPanel" style="display: none;">
+        <label class="font-mono text-xs font-medium uppercase tracking-widest text-muted-foreground" style="display: block; margin-bottom: 0.75rem;">Brand your report</label>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+          <input type="text" id="companyName" placeholder="Company name" class="flex-1" style="min-width: 180px;" />
+          <input type="color" id="brandColor" value="#1e40af" style="width: 44px; height: 44px; padding: 4px; border-radius: var(--radius); border: 1px solid var(--border); cursor: pointer; background: var(--input-background);" />
+          <input type="file" id="logoInput" accept="image/*" style="display: none;" />
+          <button type="button" id="logoBtn" style="border-radius: 9999px; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; border: 1px solid var(--border); background: var(--card); color: var(--foreground); cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2 2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload logo
+          </button>
+          <span id="logoName" class="text-xs text-muted-foreground" style="display: none; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+          <button type="button" id="pdfBtn" class="send-btn">
+            Download branded PDF
+          </button>
+        </div>
+      </div>
+<div class="email-panel" id="emailPanel" style="display: none;">
         <label class="font-mono text-xs font-medium uppercase tracking-widest text-muted-foreground" for="emailInput">Email report</label>
         <form class="email-form flex flex-col sm:flex-row gap-2" id="emailForm" autocomplete="off">
           <input type="email" id="emailInput" placeholder="you@agency.com" required class="flex-1" />
@@ -543,6 +559,15 @@
     const sendBtn = document.getElementById('sendBtn');
     const emailStatus = document.getElementById('emailStatus');
     const sendLabel = document.getElementById('sendLabel');
+    const brandPanel = document.getElementById('brandPanel');
+    const companyName = document.getElementById('companyName');
+    const brandColor = document.getElementById('brandColor');
+    const logoInput = document.getElementById('logoInput');
+    const logoBtn = document.getElementById('logoBtn');
+    const logoName = document.getElementById('logoName');
+    const pdfBtn = document.getElementById('pdfBtn');
+
+
 
     let currentFile = null;
 
@@ -590,9 +615,12 @@
       goBtn.disabled = true;
       hideStatus();
       summaryCard.classList.remove('show');
+      brandPanel.style.display = 'none';
       emailPanel.style.display = 'none';
       hideError();
       uploadText.textContent = 'Drop your CSV here';
+      if (logoInput) logoInput.value = '';
+      if (logoName) logoName.style.display = 'none';
     }
 
     function handleFile(f) {
@@ -662,6 +690,7 @@
         });
         showStatus('Analyzed ' + (data.rows_analyzed || 0).toLocaleString() + ' rows');
         summaryCard.classList.add('show');
+        brandPanel.style.display = '';
         emailPanel.style.display = '';
       } catch (e) {
         hideStatus();
@@ -706,6 +735,67 @@
         sendLabel.textContent = 'Send report';
       }
     });
+
+
+    logoBtn.onclick = () => logoInput.click();
+    logoInput.addEventListener('change', (e) => {
+      if (e.target.files.length) {
+        logoName.textContent = e.target.files[0].name;
+        logoName.style.display = '';
+      }
+    });
+
+    pdfBtn.onclick = async () => {
+      const company = (companyName.value || '').trim();
+      const color = brandColor.value;
+      const logoFile = logoInput.files[0];
+      const summary = (summaryList.innerText || '').trim();
+      if (!company || !color || !summary) {
+        alert('Please enter your company name, pick a brand color, and upload a CSV first.');
+        return;
+      }
+
+      let logoBase64 = null;
+      if (logoFile) {
+        logoBase64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result.split(',')[1]);
+          reader.readAsDataURL(logoFile);
+        });
+      }
+
+      pdfBtn.disabled = true;
+      pdfBtn.textContent = 'Generating\u2026';
+      try {
+        const res = await fetch('/api/pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ companyName: company, brandColor: color, logoBase64, summaryText: summary, website: '' }),
+        });
+        const contentType = (res.headers.get('content-type') || '').toLowerCase();
+        if (!res.ok) {
+          const text = await res.text();
+          let data;
+          try { data = JSON.parse(text); } catch { data = {}; }
+          throw new Error(data.error || 'Failed to generate PDF');
+        }
+        const arrayBuffer = await res.arrayBuffer();
+        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${company.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-report.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      } finally {
+        pdfBtn.disabled = false;
+        pdfBtn.textContent = 'Download branded PDF';
+      }
+    };
   </script>
 </body>
 </html>

@@ -1,0 +1,11 @@
+{
+  "name": "clearview-reports",
+  "private": true,
+  "scripts": {
+    "build": "echo 'Vercel auto-builds Node functions'"
+  },
+  "dependencies": {
+    "puppeteer-core": "^21.11.0",
+    "@sparticuz/chromium": "^113.0.0"
+  }
+}
