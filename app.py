@@ -158,13 +158,14 @@ OUTPUT FORMAT (write exactly like this, clean bullets, agency-ready tone):
 • Total spend: $X | Total conversions: Y | Average cost per conversion: $Z
 • Top performers: [name] ($A cost per conversion), [name] ($A cost per conversion), [name] ($A cost per conversion)
 • Underperformers: [name] ($A cost per conversion), [name] ($A cost per conversion), [name] ($A cost per conversion)
-• Recommendation: [1 sentence actionable advice for next month]
+• Recommendation: [Specific action: name the worst campaign, its exact cost per conversion vs account average, and a concrete reallocation/pause/reduction action. No generic advice.]
 
 RULES:
 - Use the exact numbers above. Do not recalculate anything.
 - Keep it to 4 bullet points exactly.
 - Write in plain conversational English, like a human analyst.
-- No markdown headers, no extra fluff, no hedging."""
+- No markdown headers, no extra fluff, no hedging.
+- The recommendation MUST reference actual campaign names and numbers from this file."""
 
         api_key = os.getenv('GROQ_API_KEY')
         if not api_key:
