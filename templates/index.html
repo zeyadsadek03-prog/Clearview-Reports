@@ -7,49 +7,50 @@
   <style>
     :root {
       --font-size: 16px;
-      --background: #ffffff;
-      --foreground: #0f1115;
-      --card: #ffffff;
-      --card-foreground: #0f1115;
-      --popover: #ffffff;
-      --popover-foreground: #0f1115;
-      --primary: #030213;
-      --primary-foreground: #ffffff;
-      --secondary: #e9ebef;
-      --secondary-foreground: #030213;
-      --muted: #ececf0;
-      --muted-foreground: #8b8d95;
-      --accent: #e9ebef;
-      --accent-foreground: #030213;
-      --destructive: #d4183d;
+      --background: #f4f1e4;
+      --foreground: #1c1a0f;
+      --card: #faf8f0;
+      --card-foreground: #1c1a0f;
+      --popover: #faf8f0;
+      --popover-foreground: #1c1a0f;
+      --primary: #84cc16;
+      --primary-foreground: #1c1a0f;
+      --secondary: #e8e4d4;
+      --secondary-foreground: #1c1a0f;
+      --muted: #e0dcc8;
+      --muted-foreground: #6b6550;
+      --accent: #e8e4d4;
+      --accent-foreground: #1c1a0f;
+      --destructive: #ef4444;
       --destructive-foreground: #ffffff;
-      --border: rgba(0,0,0,0.1);
+      --border: rgba(0,0,0,0.08);
       --input: transparent;
-      --input-background: #f3f3f5;
+      --input-background: #eeead8;
       --radius: 10px;
-      --ring: rgba(0,0,0,0.15);
+      --ring: rgba(132,204,22,0.25);
     }
 
     .dark {
-      --background: #0f1115;
-      --foreground: #f4f4f6;
-      --card: #0f1115;
-      --card-foreground: #f4f4f6;
-      --popover: #0f1115;
-      --popover-foreground: #f4f4f6;
-      --primary: #f4f4f6;
-      --primary-foreground: #0f1115;
-      --secondary: #1c1d22;
-      --secondary-foreground: #f4f4f6;
-      --muted: #1c1d22;
-      --muted-foreground: #b3b4b9;
-      --accent: #1c1d22;
-      --accent-foreground: #f4f4f6;
-      --destructive: #f8717a;
-      --destructive-foreground: #1c1d22;
-      --border: rgba(255,255,255,0.08);
-      --input: #1c1d22;
-      --ring: rgba(255,255,255,0.15);
+      --background: #000000;
+      --foreground: #c4b5fd;
+      --card: #020204;
+      --card-foreground: #c4b5fd;
+      --popover: #050508;
+      --popover-foreground: #c4b5fd;
+      --primary: #8b5cf6;
+      --primary-foreground: #000000;
+      --secondary: #0a001a;
+      --secondary-foreground: #c4b5fd;
+      --muted: #0a001a;
+      --muted-foreground: #6b5fa0;
+      --accent: #12052a;
+      --accent-foreground: #c4b5fd;
+      --destructive: #dc2626;
+      --destructive-foreground: #ffffff;
+      --border: rgba(139,92,246,0.18);
+      --input: #0a001a;
+      --input-background: #0a001a;
+      --ring: rgba(139,92,246,0.25);
     }
 
     * { box-sizing: border-box; }
@@ -134,14 +135,13 @@
     .error-banner.show { display: flex; }
 
     .upload {
-      border: 1.5px dashed rgba(0,0,0,0.18);
+      border: 1.5px dashed var(--border);
       background: var(--card);
       border-radius: var(--radius);
       min-height: 180px;
       transition: border-color .15s, background .15s;
       position: relative;
     }
-    .dark .upload { border-color: rgba(255,255,255,0.12); }
 
     .upload.drag-over {
       border-color: var(--foreground);
@@ -292,7 +292,7 @@
     <header>
       <span class="brand">Clearview Reports</span>
       <div class="header-actions">
-        <span class="badge" id="version">v1.2.0</span>
+        <span class="badge" id="version">v1.2.1</span>
         <button class="icon-btn" id="themeToggle" aria-label="Toggle theme">
           <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
           <svg id="sunIcon" style="display:none" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
