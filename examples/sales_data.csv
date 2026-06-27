@@ -1,0 +1,9 @@
+product,quantity,unit_price,region,date
+Widget A,120,15.50,North,2026-06-01
+Widget B,80,22.00,South,2026-06-02
+Widget A,95,15.50,East,2026-06-03
+Widget C,45,35.00,North,2026-06-04
+Widget B,60,22.00,West,2026-06-05
+Widget A,110,15.50,South,2026-06-06
+Widget C,30,35.00,East,2026-06-07
+Widget B,75,22.00,North,2026-06-08

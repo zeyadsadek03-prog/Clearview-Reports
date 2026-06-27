@@ -1,0 +1,9 @@
+date,category,amount,payment_method
+2026-06-01,Food,45.20,Cash
+2026-06-02,Transport,18.50,Credit Card
+2026-06-03,Utilities,120.00,Bank Transfer
+2026-06-04,Food,32.10,Cash
+2026-06-05,Shopping,210.00,Credit Card
+2026-06-06,Food,55.00,Cash
+2026-06-07,Health,80.00,Debit Card
+2026-06-08,Transport,22.40,Credit Card
