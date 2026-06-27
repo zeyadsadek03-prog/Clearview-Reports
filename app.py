@@ -33,9 +33,16 @@ Headers: {', '.join(headers)}
 Rows:
 {sample}
 
-Write a clear, concise plain-English summary of what this data likely represents.
-Include: totals/counts, notable trends or patterns, and any outliers.
-Output in 3-6 short paragraphs."""
+Return ONLY a JSON object with this exact shape and nothing else:
+{{"sections": [{{"title": "...", "content": "..."}}]}}
+
+Required sections (use these exact titles):
+1. Overview of the Data
+2. Totals and Counts
+3. Key Figures and Patterns
+4. Outliers and Anomalies
+
+If a section has no relevant insight, return an empty string for content."""
 
         api_key = os.getenv('GROQ_API_KEY')
         if not api_key:
@@ -51,13 +58,15 @@ Output in 3-6 short paragraphs."""
                 'model': 'llama-3.3-70b-versatile',
                 'messages': [{'role': 'user', 'content': prompt}],
                 'temperature': 0.3,
+                'response_format': {'type': 'json_object'},
             },
             timeout=30,
         )
         resp.raise_for_status()
-        summary = resp.json()['choices'][0]['message']['content']
-
-        return jsonify({'summary': summary, 'rows_analyzed': min(len(data_rows), 20)})
+        raw = resp.json()['choices'][0]['message']['content']
+        parsed = json.loads(raw)
+        sections = parsed.get('sections', [])
+        return jsonify({'sections': sections, 'rows_analyzed': min(len(data_rows), 20)})
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
