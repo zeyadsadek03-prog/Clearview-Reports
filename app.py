@@ -234,7 +234,7 @@ def send_email():
                 'Content-Type': 'application/json',
             },
             json={
-                'from': 'Clearview Reports <reports@clearview.app>',
+                'from': 'Clearview Reports <onboarding@resend.dev>',
                 'to': [email],
                 'subject': 'Your Clearview Reports Summary',
                 'text': summary,
