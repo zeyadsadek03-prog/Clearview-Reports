@@ -1,8 +1,10 @@
 {
   "builds": [
-    { "src": "*.py", "use": "@vercel/python" }
+    { "src": "*.py", "use": "@vercel/python" },
+    { "src": "package.json", "use": "@vercel/node" }
   ],
   "routes": [
+    { "src": "/api/pdf", "dest": "api/pdf.js" },
     { "src": "/(.*)", "dest": "app.py" }
   ]
 }
