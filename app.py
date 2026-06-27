@@ -120,7 +120,13 @@ Rules:
                     time.sleep(wait)
                     continue
                 resp.raise_for_status()
-                summary = resp.json()['choices'][0]['message']['content'].strip()
+                try:
+                    body = resp.json()
+                except ValueError:
+                    return jsonify({'error': 'AI provider returned an invalid response. Please try again shortly.'}), 502
+                summary = (body.get('choices', [{}])[0].get('message', {}) or {}).get('content', '').strip()
+                if not summary:
+                    return jsonify({'error': 'AI provider returned an empty response.'}), 502
                 return jsonify({'summary': summary, 'rows_analyzed': len(data_rows)})
             except requests.RequestException:
                 attempts += 1
