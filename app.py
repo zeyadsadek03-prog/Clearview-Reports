@@ -241,6 +241,8 @@ def send_email():
             },
             timeout=20,
         )
+        if resp.status_code == 403:
+            return jsonify({'error': 'Resend rejected the request: check that RESEND_API_KEY is valid and the sender domain (clearview.app) is verified in Resend.'}), 502
         resp.raise_for_status()
         return jsonify({'status': 'sent'})
     except requests.RequestException as e:
