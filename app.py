@@ -78,16 +78,18 @@ SAMPLE ROWS (first 15):
 PRECOMPUTED STATS (ground truth, MUST use these exact numbers):
 {stats_block}
 
-Write ONE short executive summary paragraph (3-6 sentences) in plain, conversational English.
+Write a concise client-ready report in this EXACT format using ONLY the provided stats:
+
+• Total spend, total conversions, average cost per conversion
+• Top 3 campaigns by performance
+• Bottom 3 campaigns by performance
+• One clear recommendation for next month
 
 Rules:
-- Start with the single most important number or insight.
-- Mention totals, averages, or standout figures ONLY from the provided stats.
-- Give a clear verdict: is this data showing good performance, average performance, or something to fix?
-- End with 1-2 concrete, actionable recommendations the client can do next month.
-- Sound like a helpful human analyst, not a bot. Use contractions, be direct, avoid jargon.
-- No bullet lists, no numbered sections, no markdown formatting. Just one flowing paragraph.
-- If you mention a number, ensure it matches the precomputed stats exactly."""
+- Use bullet points exactly as shown above.
+- Keep wording plain and conversational, like a helpful human analyst.
+- No markdown headers, no numbering, no extra fluff.
+- Do not invent numbers. If you mention a metric, it must match the precomputed stats exactly."""
 
         api_key = os.getenv('GROQ_API_KEY')
         if not api_key:
