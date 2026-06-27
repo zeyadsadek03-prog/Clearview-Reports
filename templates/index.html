@@ -5,63 +5,446 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Clearview Reports</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; }
-    h1 { font-size: 1.4rem; }
-    .drop { border: 2px dashed #888; padding: 40px; text-align: center; border-radius: 10px; margin: 20px 0; }
-    .drop.dragover { border-color: #000; background: #f0f0f0; }
-    button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; }
-    #preview { white-space: pre-wrap; background: #f5f5f5; padding: 16px; border-radius: 8px; }
+    :root {
+      --font-size: 16px;
+      --background: #ffffff;
+      --foreground: #0f1115;
+      --card: #ffffff;
+      --card-foreground: #0f1115;
+      --popover: #ffffff;
+      --popover-foreground: #0f1115;
+      --primary: #030213;
+      --primary-foreground: #ffffff;
+      --secondary: #e9ebef;
+      --secondary-foreground: #030213;
+      --muted: #ececf0;
+      --muted-foreground: #8b8d95;
+      --accent: #e9ebef;
+      --accent-foreground: #030213;
+      --destructive: #d4183d;
+      --destructive-foreground: #ffffff;
+      --border: rgba(0,0,0,0.1);
+      --input: transparent;
+      --input-background: #f3f3f5;
+      --radius: 10px;
+      --ring: rgba(0,0,0,0.15);
+    }
+
+    .dark {
+      --background: #0f1115;
+      --foreground: #f4f4f6;
+      --card: #0f1115;
+      --card-foreground: #f4f4f6;
+      --popover: #0f1115;
+      --popover-foreground: #f4f4f6;
+      --primary: #f4f4f6;
+      --primary-foreground: #0f1115;
+      --secondary: #1c1d22;
+      --secondary-foreground: #f4f4f6;
+      --muted: #1c1d22;
+      --muted-foreground: #b3b4b9;
+      --accent: #1c1d22;
+      --accent-foreground: #f4f4f6;
+      --destructive: #f8717a;
+      --destructive-foreground: #1c1d22;
+      --border: rgba(255,255,255,0.08);
+      --input: #1c1d22;
+      --ring: rgba(255,255,255,0.15);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--background);
+      color: var(--foreground);
+      font-size: var(--font-size);
+      line-height: 1.5;
+      transition: background .2s, color .2s;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 40px;
+    }
+
+    .brand {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      font-size: 1.05rem;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.75rem;
+      color: var(--muted-foreground);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px 10px;
+    }
+
+    .icon-btn {
+      background: transparent;
+      color: var(--muted-foreground);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .icon-btn:hover { color: var(--foreground); background: var(--secondary); }
+
+    .instruction {
+      color: var(--muted-foreground);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin: 0 0 32px;
+    }
+
+    .error-banner {
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      font-size: 0.9rem;
+      background: var(--destructive);
+      color: var(--destructive-foreground);
+      border: 1px solid transparent;
+      margin-bottom: 20px;
+    }
+    .error-banner.show { display: flex; }
+
+    .upload {
+      border: 1.5px dashed rgba(0,0,0,0.18);
+      background: var(--card);
+      border-radius: var(--radius);
+      min-height: 180px;
+      transition: border-color .15s, background .15s;
+      position: relative;
+    }
+    .dark .upload { border-color: rgba(255,255,255,0.12); }
+
+    .upload.drag-over {
+      border-color: var(--foreground);
+      background: color-mix(in srgb, var(--foreground) 3%, transparent);
+    }
+
+    .upload-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 44px 20px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .upload-icon {
+      border-radius: var(--radius);
+      padding: 10px;
+      background: var(--secondary);
+      color: var(--muted-foreground);
+      display: inline-flex;
+    }
+
+    .upload-title { color: var(--foreground); font-size: 0.92rem; line-height: 1.5; }
+    .upload-hint { color: var(--muted-foreground); font-size: 0.78rem; margin-top: 4px; }
+    .underline-link {
+      color: inherit;
+      font-weight: 500;
+      text-decoration: underline;
+      text-decoration-style: dotted;
+      text-underline-offset: 2px;
+      text-decoration-color: var(--muted-foreground);
+      cursor: pointer;
+    }
+
+    .file-chip {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+    }
+    .file-chip.show { display: flex; }
+
+    .file-icon {
+      border-radius: 8px;
+      padding: 8px;
+      background: var(--secondary);
+      color: var(--foreground);
+      display: inline-flex;
+      flex-shrink: 0;
+    }
+
+    .file-meta { min-width: 0; flex: 1; }
+    .file-name {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--foreground);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-size { font-size: 0.75rem; color: var(--muted-foreground); margin-top: 2px; }
+
+    .clear-btn {
+      background: transparent;
+      color: var(--muted-foreground);
+      border: none;
+      border-radius: 8px;
+      padding: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .clear-btn:hover { color: var(--foreground); background: var(--muted); }
+
+    .primary-btn {
+      width: 100%;
+      border: none;
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      font-size: 0.92rem;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      margin-top: 14px;
+      background: var(--primary);
+      color: var(--primary-foreground);
+      cursor: pointer;
+      transition: filter .15s, background .15s, color .15s;
+    }
+    .primary-btn:disabled {
+      background: var(--secondary);
+      color: var(--muted-foreground);
+      cursor: not-allowed;
+      filter: none;
+    }
+    .primary-btn:not(:disabled):hover { filter: brightness(0.92); }
+    .primary-btn:active:not(:disabled) { transform: translateY(1px); }
+
+    .btn-inner { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    .status {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--muted-foreground);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      min-height: 1.25rem;
+      margin-top: 10px;
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .status.show { opacity: 1; }
+
+    .summary-card {
+      margin-top: 24px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--card);
+      padding: 28px;
+      display: none;
+    }
+    .summary-card.show { display: block; }
+
+    .summary-text {
+      color: var(--foreground);
+      line-height: 1.75;
+      font-size: 0.92rem;
+      white-space: pre-wrap;
+    }
+
+    .summary-meta {
+      margin-top: 18px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.72rem;
+      color: var(--muted-foreground);
+    }
+
+    input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h1>Clearview Reports</h1>
-  <p>Upload a CSV and get a plain-English summary.</p>
+  <div class="container">
+    <header>
+      <span class="brand">Clearview Reports</span>
+      <div class="header-actions">
+        <span class="badge" id="version">v1.2.0</span>
+        <button class="icon-btn" id="themeToggle" aria-label="Toggle theme">
+          <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg id="sunIcon" style="display:none" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+      </div>
+    </header>
 
-  <div id="drop" class="drop">
-    <p>Drag & drop CSV here, or click to browse</p>
-    <input type="file" id="file" accept=".csv" hidden />
+    <p class="instruction">Upload a CSV file and get an AI-generated plain-language summary in seconds.</p>
+
+    <div class="error-banner" id="errorBanner" role="alert">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px;flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      <span id="errorMsg"></span>
+    </div>
+
+    <div class="upload" id="upload">
+      <input type="file" id="fileInput" accept=".csv" />
+      <div class="upload-empty" id="uploadEmpty">
+        <div class="upload-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <div class="upload-title">
+          Drag and drop a CSV file here, or <span class="underline-link" id="browseLink">browse files</span>
+        </div>
+        <div class="upload-hint">.csv only · up to 50 MB</div>
+      </div>
+
+      <div class="file-chip" id="fileChip">
+        <div class="file-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="file-meta">
+          <div class="file-name" id="fileName">—</div>
+          <div class="file-size" id="fileSize">—</div>
+        </div>
+        <button class="clear-btn" id="clearBtn" aria-label="Remove file">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <button class="primary-btn" id="goBtn" disabled>Summarize</button>
+
+    <p class="status" id="status">File ready. Click Summarize to analyze.</p>
+
+    <div class="summary-card" id="summaryCard">
+      <p class="summary-text" id="summaryText"></p>
+      <p class="summary-meta" id="summaryMeta"></p>
+    </div>
   </div>
 
-  <button id="go" disabled>Summarize</button>
-  <div id="status"></div>
-  <pre id="preview"></pre>
-
   <script>
-    const drop = document.getElementById('drop');
-    const input = document.getElementById('file');
-    const go = document.getElementById('go');
+    const html = document.documentElement;
+    const upload = document.getElementById('upload');
+    const fileInput = document.getElementById('fileInput');
+    const uploadEmpty = document.getElementById('uploadEmpty');
+    const fileChip = document.getElementById('fileChip');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const clearBtn = document.getElementById('clearBtn');
+    const browseLink = document.getElementById('browseLink');
+    const goBtn = document.getElementById('goBtn');
     const status = document.getElementById('status');
-    const preview = document.getElementById('preview');
+    const summaryCard = document.getElementById('summaryCard');
+    const summaryText = document.getElementById('summaryText');
+    const summaryMeta = document.getElementById('summaryMeta');
+    const errorBanner = document.getElementById('errorBanner');
+    const errorMsg = document.getElementById('errorMsg');
+    const themeToggle = document.getElementById('themeToggle');
+    const moonIcon = document.getElementById('moonIcon');
+    const sunIcon = document.getElementById('sunIcon');
 
-    drop.onclick = () => input.click();
-    input.onchange = () => go.disabled = false;
+    let currentFile = null;
 
-    drop.ondragover = (e) => { e.preventDefault(); drop.classList.add('dragover'); };
-    drop.ondragleave = () => drop.classList.remove('dragover');
-    drop.ondrop = (e) => {
-      e.preventDefault();
-      drop.classList.remove('dragover');
-      if (e.dataTransfer.files.length) {
-        input.files = e.dataTransfer.files;
-        go.disabled = false;
+    function formatBytes(b) {
+      if (b < 1024) return b + ' B';
+      if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+      return (b / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function setTheme(dark) {
+      html.classList.toggle('dark', dark);
+      moonIcon.style.display = dark ? 'none' : 'block';
+      sunIcon.style.display = dark ? 'block' : 'none';
+      localStorage.setItem('theme', dark ? 'dark' : 'light');
+    }
+    const saved = localStorage.getItem('theme');
+    setTheme(saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches));
+    themeToggle.onclick = () => setTheme(!html.classList.contains('dark'));
+
+    function resetUpload(clearInput = true) {
+      currentFile = null;
+      if (clearInput) fileInput.value = '';
+      uploadEmpty.style.display = '';
+      fileChip.classList.remove('show');
+      goBtn.disabled = true;
+      status.classList.remove('show');
+      summaryCard.classList.remove('show');
+      errorBanner.classList.remove('show');
+    }
+
+    function handleFile(f) {
+      if (!f) return;
+      if (!f.name.toLowerCase().endsWith('.csv')) {
+        errorMsg.textContent = 'Only .csv files are accepted. Please choose a different file.';
+        errorBanner.classList.add('show');
+        resetUpload();
+        return;
       }
-    };
+      errorBanner.classList.remove('show');
+      currentFile = f;
+      fileName.textContent = f.name;
+      fileSize.textContent = formatBytes(f.size);
+      uploadEmpty.style.display = 'none';
+      fileChip.classList.add('show');
+      goBtn.disabled = false;
+      summaryCard.classList.remove('show');
+    }
 
-    go.onclick = async () => {
+    upload.ondragover = (e) => { e.preventDefault(); upload.classList.add('drag-over'); };
+    upload.ondragleave = () => upload.classList.remove('drag-over');
+    upload.ondrop = (e) => {
+      e.preventDefault();
+      upload.classList.remove('drag-over');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    };
+    fileInput.onchange = (e) => { if (e.target.files.length) handleFile(e.target.files[0]); };
+    browseLink.onclick = (e) => { e.stopPropagation(); fileInput.click(); };
+    clearBtn.onclick = () => resetUpload();
+
+    goBtn.onclick = async () => {
+      if (!currentFile) return;
       const form = new FormData();
-      form.append('file', input.files[0]);
-      status.textContent = 'Working...';
-      go.disabled = true;
+      form.append('file', currentFile);
+      goBtn.disabled = true;
+      status.classList.add('show');
+      status.textContent = 'Parsing rows and sending to model…';
+      summaryCard.classList.remove('show');
+      errorBanner.classList.remove('show');
       try {
         const res = await fetch('/upload', { method: 'POST', body: form });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed');
-        preview.textContent = data.summary;
-        status.textContent = `Done. Analyzed up to ${data.rows_analyzed} rows.`;
+        summaryText.textContent = data.summary;
+        summaryMeta.textContent = 'Analyzed ' + (data.rows_analyzed || 0).toLocaleString() + ' rows';
+        summaryCard.classList.add('show');
+        status.textContent = 'Analysis complete.';
       } catch (e) {
-        status.textContent = 'Error: ' + e.message;
+        status.textContent = '';
+        errorMsg.textContent = 'Error: ' + e.message;
+        errorBanner.classList.add('show');
       } finally {
-        go.disabled = false;
+        goBtn.disabled = false;
       }
     };
   </script>
