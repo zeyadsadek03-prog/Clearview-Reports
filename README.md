@@ -1,1 +1,1 @@
-https://web-production-71946.up.railway.app/
+https://clearview-reports.vercel.app/
