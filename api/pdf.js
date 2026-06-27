@@ -1,6 +1,29 @@
 const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
 
+async function launchBrowser() {
+  const isVercel = !!process.env.VERCEL;
+  const executablePath = isVercel ? await chromium.executablePath() : undefined;
+
+  if (isVercel && !executablePath) {
+    throw new Error('Chromium executablePath not found in Vercel environment');
+  }
+
+  return puppeteer.launch({
+    args: [
+      ...chromium.args,
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--single-process',
+    ],
+    defaultViewport: chromium.defaultViewport,
+    executablePath,
+    headless: 'new',
+  });
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -19,15 +42,15 @@ module.exports = async (req, res) => {
 
   let browser;
   try {
-    const isVercel = !!process.env.VERCEL;
-    browser = await puppeteer.launch({
-      args: isVercel ? [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'] : chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: isVercel ? await chromium.executablePath() : undefined,
-      headless: 'new',
-    });
+    browser = await launchBrowser();
+    console.log('Browser launched successfully');
 
     const page = await browser.newPage();
+    console.log('Page created');
+
+    // Set a generous timeout for page operations
+    page.setDefaultTimeout(30000);
+
     const logoHtml = logoBase64
       ? `<img class="logo" src="data:image/png;base64,${logoBase64}" alt="Logo" />`
       : '';
@@ -52,9 +75,10 @@ module.exports = async (req, res) => {
   <meta charset="UTF-8">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
-    body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; color: #111; margin: 0; padding: 40px; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; color: #111; margin: 0; padding: 40px; font-size: 14px; }
     .accent-bar { background: ${brandColor}; height: 6px; border-radius: 3px; margin-bottom: 24px; }
-    .logo { max-height: 60px; max-width: 180px; object-fit: contain; margin-bottom: 24px; }
+    .logo { max-height: 60px; max-width: 180px; object-fit: contain; margin-bottom: 24px; display: block; }
     .header { font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.08em; }
     .company { font-size: 22px; font-weight: 600; color: #111; margin-bottom: 20px; }
     .section-title { font-size: 13px; font-weight: 600; color: ${brandColor}; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -73,7 +97,8 @@ module.exports = async (req, res) => {
 </body>
 </html>`;
 
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    console.log('HTML content set');
 
     const pdfBuffer = await page.pdf({
       format: 'A4',
@@ -82,13 +107,16 @@ module.exports = async (req, res) => {
     });
 
     await browser.close();
+    console.log('PDF generated, size:', pdfBuffer.length);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline; filename="clearview-report.pdf"');
     res.setHeader('Content-Length', pdfBuffer.length);
     return res.status(200).send(Buffer.from(pdfBuffer));
   } catch (err) {
-    if (browser) await browser.close().catch(() => {});
+    if (browser) {
+      try { await browser.close(); } catch {}
+    }
     console.error('PDF generation error:', err);
     return res.status(500).json({ error: 'Failed to generate PDF: ' + err.message });
   }
