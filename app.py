@@ -29,21 +29,20 @@ def upload():
         data_rows = rows[1:]
         sample = '\n'.join([', '.join(r) for r in data_rows[:20]])
 
-        prompt = f"""You are a data analyst. Below are the first 20 rows of a CSV file.
+        prompt = f"""You are a senior data analyst writing directly to a business owner/client. Below are sample rows from their CSV file.
 Headers: {', '.join(headers)}
 Rows:
 {sample}
 
-Return ONLY a JSON object with this exact shape and nothing else:
-{{"sections": [{{"title": "...", "content": "..."}}]}}
+Write ONE short executive summary paragraph (3-6 sentences) in plain, conversational English.
 
-Required sections (use these exact titles):
-1. Overview of the Data
-2. Totals and Counts
-3. Key Figures and Patterns
-4. Outliers and Anomalies
-
-If a section has no relevant insight, return an empty string for content."""
+Rules:
+- Start with the single most important number or insight.
+- Mention totals, averages, or standout figures naturally.
+- Give a clear verdict: is this data showing good performance, average performance, or something to fix?
+- End with 1-2 concrete, actionable recommendations the client can do next month.
+- Sound like a helpful human analyst, not a bot. Use contractions, be direct, avoid jargon.
+- No bullet lists, no numbered sections, no markdown formatting. Just one flowing paragraph."""
 
         api_key = os.getenv('GROQ_API_KEY')
         if not api_key:
@@ -59,15 +58,13 @@ If a section has no relevant insight, return an empty string for content."""
                 'model': 'llama-3.3-70b-versatile',
                 'messages': [{'role': 'user', 'content': prompt}],
                 'temperature': 0.3,
-                'response_format': {'type': 'json_object'},
             },
             timeout=30,
         )
         resp.raise_for_status()
-        raw = resp.json()['choices'][0]['message']['content']
-        parsed = json.loads(raw)
-        sections = parsed.get('sections', [])
-        return jsonify({'sections': sections, 'rows_analyzed': min(len(data_rows), 20)})
+        summary = resp.json()['choices'][0]['message']['content'].strip()
+
+        return jsonify({'summary': summary, 'rows_analyzed': min(len(data_rows), 20)})
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
