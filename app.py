@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, render_template
-import json, csv, io, os, requests
+import json, csv, io, os, time, requests
 from collections import Counter
 
 app = Flask(__name__)
@@ -95,23 +95,39 @@ Rules:
         if not api_key:
             return jsonify({'error': 'Server not configured: missing GROQ_API_KEY'}), 500
 
-        resp = requests.post(
-            'https://api.groq.com/openai/v1/chat/completions',
-            headers={
-                'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json',
-            },
-            json={
-                'model': 'llama-3.3-70b-versatile',
-                'messages': [{'role': 'user', 'content': prompt}],
-                'temperature': 0.3,
-            },
-            timeout=30,
-        )
-        resp.raise_for_status()
-        summary = resp.json()['choices'][0]['message']['content'].strip()
+        payload = {
+            'model': 'llama-3.3-70b-versatile',
+            'messages': [{'role': 'user', 'content': prompt}],
+            'temperature': 0.3,
+        }
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json',
+        }
 
-        return jsonify({'summary': summary, 'rows_analyzed': len(data_rows)})
+        attempts = 0
+        while attempts < 5:
+            try:
+                resp = requests.post(
+                    'https://api.groq.com/openai/v1/chat/completions',
+                    headers=headers,
+                    json=payload,
+                    timeout=30,
+                )
+                if resp.status_code == 429:
+                    attempts += 1
+                    wait = min(2 ** attempts, 10)
+                    time.sleep(wait)
+                    continue
+                resp.raise_for_status()
+                summary = resp.json()['choices'][0]['message']['content'].strip()
+                return jsonify({'summary': summary, 'rows_analyzed': len(data_rows)})
+            except requests.RequestException:
+                attempts += 1
+                if attempts >= 5:
+                    raise
+
+        return jsonify({'error': 'Rate limit exceeded. Please try again in a few seconds.'}), 429
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
