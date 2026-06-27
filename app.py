@@ -5,12 +5,17 @@ from collections import Counter, defaultdict
 app = Flask(__name__)
 
 def to_num(v):
+    if v is None:
+        return None
+    s = str(v).replace('$', '').replace(',', '').strip()
+    if '%' in s:
+        s = s.replace('%', '')
+    if not s:
+        return None
     try:
-        if isinstance(v, str) and '%' in v:
-            v = v.replace('%', '')
-        if '.' in str(v):
-            return float(v)
-        return int(v)
+        if '.' in s:
+            return float(s)
+        return int(s)
     except:
         return None
 
