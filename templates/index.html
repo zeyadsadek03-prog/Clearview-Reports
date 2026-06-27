@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     :root {
       --font-size: 16px;
@@ -755,11 +756,11 @@
         return;
       }
 
-      let logoBase64 = null;
+      let logoDataUrl = null;
       if (logoFile) {
-        logoBase64 = await new Promise((resolve) => {
+        logoDataUrl = await new Promise((resolve) => {
           const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result.split(',')[1]);
+          reader.onloadend = () => resolve(reader.result);
           reader.readAsDataURL(logoFile);
         });
       }
@@ -767,28 +768,38 @@
       pdfBtn.disabled = true;
       pdfBtn.textContent = 'Generating\u2026';
       try {
-        const res = await fetch('/api/pdf', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ companyName: company, brandColor: color, logoBase64, summaryText: summary, website: '' }),
-        });
-        const contentType = (res.headers.get('content-type') || '').toLowerCase();
-        if (!res.ok) {
-          const text = await res.text();
-          let data;
-          try { data = JSON.parse(text); } catch { data = {}; }
-          throw new Error(data.error || 'Failed to generate PDF');
-        }
-        const arrayBuffer = await res.arrayBuffer();
-        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${company.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-report.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        const logoHtml = logoDataUrl
+          ? `<img src="${logoDataUrl}" style="max-height:60px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;" />`
+          : '';
+        const safeSummary = summary
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\n/g, '<br>');
+        const safeCompany = company
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+
+        const reportHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');* { box-sizing: border-box; }body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; color: #111; margin: 0; padding: 40px; font-size: 14px; }.accent-bar { background: ${color}; height: 6px; border-radius: 3px; margin-bottom: 24px; }.logo { max-height: 60px; max-width: 180px; object-fit: contain; margin-bottom: 24px; display: block; }.header { font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.08em; }.company { font-size: 22px; font-weight: 600; color: #111; margin-bottom: 20px; }.section-title { font-size: 13px; font-weight: 600; color: ${color}; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }.summary { font-size: 14px; line-height: 1.65; color: #333; }.footer { margin-top: 60px; font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 16px; }</style></head><body><div class="accent-bar"></div>${logoHtml}<div class="header">Performance Report</div><div class="company">${safeCompany}</div><div class="section-title">Summary</div><div class="summary">${safeSummary}</div><div class="footer">Prepared for ${safeCompany}</div></body></html>`;
+
+        const reportDiv = document.createElement('div');
+        reportDiv.innerHTML = reportHtml;
+        reportDiv.style.position = 'absolute';
+        reportDiv.style.left = '-9999px';
+        reportDiv.style.top = '0';
+        document.body.appendChild(reportDiv);
+
+        const opt = {
+          margin: 1,
+          filename: `${company.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-report.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+
+        await html2pdf().set(opt).from(reportDiv.firstElementChild).save();
+        document.body.removeChild(reportDiv);
       } catch (e) {
         alert('Error: ' + e.message);
       } finally {
