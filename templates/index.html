@@ -7,8 +7,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
+    @media print {
+      #pdf-doc { display: block !important; }
+      body > *:not(#pdf-doc) { display: none !important; }
+    }
+    #pdf-doc { display: none; }
     :root {
       --font-size: 16px;
       --background: #F6F4EE;
@@ -530,6 +534,8 @@
       </div>
     </main>
 
+    <div id="pdf-doc"></div>
+
     <footer>
       <p class="font-mono text-muted-foreground">No data is stored. Summaries are generated locally.</p>
     </footer>
@@ -783,7 +789,8 @@
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;');
 
-        const bodyHtml = `
+        const pdfDoc = document.getElementById('pdf-doc');
+        pdfDoc.innerHTML = `
           <div style="font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#111;padding:40px;font-size:14px;">
             <div style="background:${color};height:6px;border-radius:3px;margin-bottom:24px;"></div>
             ${logoImg}
@@ -794,28 +801,14 @@
             <div style="margin-top:60px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:16px;">Prepared for ${safeCompany}</div>
           </div>`;
 
-        const reportDiv = document.createElement('div');
-        reportDiv.innerHTML = bodyHtml;
-        reportDiv.style.position = 'absolute';
-        reportDiv.style.left = '-9999px';
-        reportDiv.style.top = '0';
-        reportDiv.style.background = '#fff';
-        reportDiv.style.width = '800px';
-        reportDiv.style.minHeight = '1000px';
-        reportDiv.style.visibility = 'hidden';
-        document.body.appendChild(reportDiv);
+        pdfDoc.style.display = 'block';
 
-        const opt = {
-          margin: 0,
-          filename: `${company.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-report.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 1, useCORS: true },
-          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['css', 'legacy'] }
+        const cleanup = () => {
+          pdfDoc.style.display = 'none';
+          window.removeEventListener('afterprint', cleanup);
         };
-
-        await html2pdf().set(opt).from(reportDiv).save();
-        document.body.removeChild(reportDiv);
+        window.addEventListener('afterprint', cleanup);
+        window.print();
       } catch (e) {
         alert('Error: ' + e.message);
       } finally {
