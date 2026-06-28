@@ -13,6 +13,8 @@
       body > *:not(#pdf-doc) { display: none !important; }
     }
     #pdf-doc { display: none; }
+  </style>
+  <style>
     :root {
       --font-size: 16px;
       --background: #F6F4EE;
@@ -510,7 +512,7 @@
         <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
           <input type="text" id="companyName" placeholder="Company name" class="flex-1" style="min-width: 180px;" />
           <input type="color" id="brandColor" value="#1e40af" style="width: 44px; height: 44px; padding: 4px; border-radius: var(--radius); border: 1px solid var(--border); cursor: pointer; background: var(--input-background);" />
-          <input type="file" id="logoInput" accept="image/*" style="display: none;" />
+          <input type="file" id="logoInput" accept=".png,.jpg,.jpeg,image/png,image/jpeg" style="display: none;" />
           <button type="button" id="logoBtn" style="border-radius: 9999px; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; border: 1px solid var(--border); background: var(--card); color: var(--foreground); cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2 2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Upload logo
@@ -533,13 +535,13 @@
         <p class="status" id="emailStatus" style="display: none;"></p>
       </div>
     </main>
-
-    <div id="pdf-doc"></div>
-
-    <footer>
-      <p class="font-mono text-muted-foreground">No data is stored. Summaries are generated locally.</p>
-    </footer>
   </div>
+
+  <footer>
+    <p class="font-mono text-muted-foreground">No data is stored. Summaries are generated locally.</p>
+  </footer>
+
+  <div id="pdf-doc"></div>
 
   <script>
     const html = document.documentElement;
@@ -789,26 +791,31 @@
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;');
 
+        const printStyles = `
+          .accent-bar { background: ${color}; height: 6px; border-radius: 3px; margin-bottom: 24px; }
+          .logo { max-height: 60px; max-width: 180px; object-fit: contain; margin-bottom: 20px; display: block; }
+          .header { font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.08em; }
+          .company { font-size: 22px; font-weight: 600; color: #111; margin-bottom: 20px; }
+          .section-title { font-size: 13px; font-weight: 600; color: ${color}; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+          .summary { font-size: 14px; line-height: 1.65; color: #333; }
+          .footer { margin-top: 60px; font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 16px; }
+        `;
+
+        const pdfContent = `
+          <style>${printStyles}</style>
+          <div class="accent-bar"></div>
+          ${logoImg}
+          <div class="header">Performance Report</div>
+          <div class="company">${safeCompany}</div>
+          <div class="section-title">Summary</div>
+          <div class="summary">${safeSummary}</div>
+          <div class="footer">Prepared for ${safeCompany}</div>
+        `;
+
         const pdfDoc = document.getElementById('pdf-doc');
-        pdfDoc.innerHTML = `
-          <div style="font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#111;padding:40px;font-size:14px;">
-            <div style="background:${color};height:6px;border-radius:3px;margin-bottom:24px;"></div>
-            ${logoImg}
-            <div style="font-size:12px;font-weight:600;color:#666;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">Performance Report</div>
-            <div style="font-size:22px;font-weight:600;color:#111;margin-bottom:20px;">${safeCompany}</div>
-            <div style="font-size:13px;font-weight:600;color:${color};margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Summary</div>
-            <div style="font-size:14px;line-height:1.65;color:#333;">${safeSummary}</div>
-            <div style="margin-top:60px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:16px;">Prepared for ${safeCompany}</div>
-          </div>`;
-
-        pdfDoc.style.display = 'block';
-
-        const cleanup = () => {
-          pdfDoc.style.display = 'none';
-          window.removeEventListener('afterprint', cleanup);
-        };
-        window.addEventListener('afterprint', cleanup);
+        pdfDoc.innerHTML = pdfContent;
         window.print();
+        setTimeout(() => { pdfDoc.innerHTML = ''; }, 1000);
       } catch (e) {
         alert('Error: ' + e.message);
       } finally {
