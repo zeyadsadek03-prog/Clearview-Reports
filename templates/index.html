@@ -571,6 +571,7 @@
 
 
     let currentFile = null;
+    let currentSummary = '';
 
     function formatBytes(b) {
       if (b < 1024) return b + ' B';
@@ -690,6 +691,7 @@
           summaryList.appendChild(li);
         });
         showStatus('Analyzed ' + (data.rows_analyzed || 0).toLocaleString() + ' rows');
+        currentSummary = data.summary || '';
         summaryCard.classList.add('show');
         brandPanel.style.display = '';
         emailPanel.style.display = '';
@@ -709,7 +711,7 @@
         emailStatus.style.display = '';
         return;
       }
-      const summary = (summaryList.innerText || '').trim();
+      const summary = currentSummary;
       if (!summary) return;
       sendBtn.disabled = true;
       sendLabel.textContent = 'Sending…';
@@ -750,7 +752,7 @@
       const company = (companyName.value || '').trim();
       const color = brandColor.value;
       const logoFile = logoInput.files[0];
-      const summary = (summaryList.innerText || '').trim();
+      const summary = currentSummary;
       if (!company || !color || !summary) {
         alert('Please enter your company name, pick a brand color, and upload a CSV first.');
         return;
