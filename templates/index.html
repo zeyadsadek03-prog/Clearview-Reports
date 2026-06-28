@@ -766,9 +766,9 @@
       }
 
       pdfBtn.disabled = true;
-      pdfBtn.textContent = 'Generating\u2026';
+      pdfBtn.textContent = 'Generating…';
       try {
-        const logoHtml = logoDataUrl
+        const logoImg = logoDataUrl
           ? `<img src="${logoDataUrl}" style="max-height:60px;max-width:180px;object-fit:contain;margin-bottom:20px;display:block;" />`
           : '';
         const safeSummary = summary
@@ -781,17 +781,33 @@
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;');
 
-        const reportHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');* { box-sizing: border-box; }body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; color: #111; margin: 0; padding: 40px; font-size: 14px; }.accent-bar { background: ${color}; height: 6px; border-radius: 3px; margin-bottom: 24px; }.logo { max-height: 60px; max-width: 180px; object-fit: contain; margin-bottom: 24px; display: block; }.header { font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.08em; }.company { font-size: 22px; font-weight: 600; color: #111; margin-bottom: 20px; }.section-title { font-size: 13px; font-weight: 600; color: ${color}; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }.summary { font-size: 14px; line-height: 1.65; color: #333; }.footer { margin-top: 60px; font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 16px; }</style></head><body><div class="accent-bar"></div>${logoHtml}<div class="header">Performance Report</div><div class="company">${safeCompany}</div><div class="section-title">Summary</div><div class="summary">${safeSummary}</div><div class="footer">Prepared for ${safeCompany}</div></body></html>`;
+        const bodyHtml = `
+          <div style="font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#111;padding:40px;font-size:14px;">
+            <div style="background:${color};height:6px;border-radius:3px;margin-bottom:24px;"></div>
+            ${logoImg}
+            <div style="font-size:12px;font-weight:600;color:#666;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">Performance Report</div>
+            <div style="font-size:22px;font-weight:600;color:#111;margin-bottom:20px;">${safeCompany}</div>
+            <div style="font-size:13px;font-weight:600;color:${color};margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Summary</div>
+            <div style="font-size:14px;line-height:1.65;color:#333;">${safeSummary}</div>
+            <div style="margin-top:60px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:16px;">Prepared for ${safeCompany}</div>
+          </div>`;
 
         const reportDiv = document.createElement('div');
-        reportDiv.innerHTML = reportHtml;
-        reportDiv.style.position = 'absolute';
-        reportDiv.style.left = '-9999px';
+        reportDiv.innerHTML = bodyHtml;
+        reportDiv.style.position = 'fixed';
+        reportDiv.style.left = '0';
         reportDiv.style.top = '0';
+        reportDiv.style.zIndex = '-1';
+        reportDiv.style.opacity = '0';
+        reportDiv.style.pointerEvents = 'none';
+        reportDiv.style.width = '8.27in';
+        reportDiv.style.minHeight = '11.69in';
+        reportDiv.style.background = '#fff';
+        reportDiv.style.boxSizing = 'border-box';
         document.body.appendChild(reportDiv);
 
         const opt = {
-          margin: 1,
+          margin: 0,
           filename: `${company.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-report.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { scale: 2, useCORS: true },
