@@ -796,24 +796,21 @@
 
         const reportDiv = document.createElement('div');
         reportDiv.innerHTML = bodyHtml;
-        reportDiv.style.position = 'fixed';
-        reportDiv.style.left = '0';
+        reportDiv.style.position = 'absolute';
+        reportDiv.style.left = '-9999px';
         reportDiv.style.top = '0';
-        reportDiv.style.zIndex = '-1';
-        reportDiv.style.opacity = '0';
-        reportDiv.style.pointerEvents = 'none';
-        reportDiv.style.width = '8.27in';
-        reportDiv.style.minHeight = '11.69in';
         reportDiv.style.background = '#fff';
-        reportDiv.style.boxSizing = 'border-box';
+        reportDiv.style.width = '800px';
+        reportDiv.style.minHeight = '1000px';
         document.body.appendChild(reportDiv);
 
         const opt = {
           margin: 0,
           filename: `${company.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-report.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+          html2canvas: { scale: 1, useCORS: true },
+          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css', 'legacy'] }
         };
 
         await html2pdf().set(opt).from(reportDiv.firstElementChild).save();
