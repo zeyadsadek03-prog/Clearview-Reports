@@ -802,13 +802,14 @@
         reportDiv.style.background = '#fff';
         reportDiv.style.width = '800px';
         reportDiv.style.minHeight = '1000px';
+        reportDiv.style.visibility = 'hidden';
         document.body.appendChild(reportDiv);
 
         const opt = {
           margin: 0,
           filename: `${company.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-report.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 1, useCORS: true },
+          html2canvas: { scale: 2, useCORS: true },
           jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
           pagebreak: { mode: ['css', 'legacy'] }
         };
